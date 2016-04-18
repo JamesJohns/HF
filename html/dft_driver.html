@@ -1,0 +1,5212 @@
+
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+      <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+   <!--
+This HTML was auto-generated from MATLAB code.
+To make changes, update the MATLAB code and republish this document.
+      --><title>dft_driver</title><meta name="generator" content="MATLAB 8.5"><link rel="schema.DC" href="http://purl.org/dc/elements/1.1/"><meta name="DC.date" content="2016-04-06"><meta name="DC.source" content="dft_driver.m"><style type="text/css">
+html,body,div,span,applet,object,iframe,h1,h2,h3,h4,h5,h6,p,blockquote,pre,a,abbr,acronym,address,big,cite,code,del,dfn,em,font,img,ins,kbd,q,s,samp,small,strike,strong,sub,sup,tt,var,b,u,i,center,dl,dt,dd,ol,ul,li,fieldset,form,label,legend,table,caption,tbody,tfoot,thead,tr,th,td{margin:0;padding:0;border:0;outline:0;font-size:100%;vertical-align:baseline;background:transparent}body{line-height:1}ol,ul{list-style:none}blockquote,q{quotes:none}blockquote:before,blockquote:after,q:before,q:after{content:'';content:none}:focus{outine:0}ins{text-decoration:none}del{text-decoration:line-through}table{border-collapse:collapse;border-spacing:0}
+
+html { min-height:100%; margin-bottom:1px; }
+html body { height:100%; margin:0px; font-family:Arial, Helvetica, sans-serif; font-size:10px; color:#000; line-height:140%; background:#fff none; overflow-y:scroll; }
+html body td { vertical-align:top; text-align:left; }
+
+h1 { padding:0px; margin:0px 0px 25px; font-family:Arial, Helvetica, sans-serif; font-size:1.5em; color:#d55000; line-height:100%; font-weight:normal; }
+h2 { padding:0px; margin:0px 0px 8px; font-family:Arial, Helvetica, sans-serif; font-size:1.2em; color:#000; font-weight:bold; line-height:140%; border-bottom:1px solid #d6d4d4; display:block; }
+h3 { padding:0px; margin:0px 0px 5px; font-family:Arial, Helvetica, sans-serif; font-size:1.1em; color:#000; font-weight:bold; line-height:140%; }
+
+a { color:#005fce; text-decoration:none; }
+a:hover { color:#005fce; text-decoration:underline; }
+a:visited { color:#004aa0; text-decoration:none; }
+
+p { padding:0px; margin:0px 0px 20px; }
+img { padding:0px; margin:0px 0px 20px; border:none; }
+p img, pre img, tt img, li img, h1 img, h2 img { margin-bottom:0px; } 
+
+ul { padding:0px; margin:0px 0px 20px 23px; list-style:square; }
+ul li { padding:0px; margin:0px 0px 7px 0px; }
+ul li ul { padding:5px 0px 0px; margin:0px 0px 7px 23px; }
+ul li ol li { list-style:decimal; }
+ol { padding:0px; margin:0px 0px 20px 0px; list-style:decimal; }
+ol li { padding:0px; margin:0px 0px 7px 23px; list-style-type:decimal; }
+ol li ol { padding:5px 0px 0px; margin:0px 0px 7px 0px; }
+ol li ol li { list-style-type:lower-alpha; }
+ol li ul { padding-top:7px; }
+ol li ul li { list-style:square; }
+
+.content { font-size:1.2em; line-height:140%; padding: 20px; }
+
+pre, code { font-size:12px; }
+tt { font-size: 1.2em; }
+pre { margin:0px 0px 20px; }
+pre.codeinput { padding:10px; border:1px solid #d3d3d3; background:#f7f7f7; }
+pre.codeoutput { padding:10px 11px; margin:0px 0px 20px; color:#4c4c4c; }
+pre.error { color:red; }
+
+@media print { pre.codeinput, pre.codeoutput { word-wrap:break-word; width:100%; } }
+
+span.keyword { color:#0000FF }
+span.comment { color:#228B22 }
+span.string { color:#A020F0 }
+span.untermstring { color:#B20000 }
+span.syscmd { color:#B28C00 }
+
+.footer { width:auto; padding:10px 0px; margin:25px 0px 0px; border-top:1px dotted #878787; font-size:0.8em; line-height:140%; font-style:italic; color:#878787; text-align:left; float:none; }
+.footer p { margin:0px; }
+.footer a { color:#878787; }
+.footer a:hover { color:#878787; text-decoration:underline; }
+.footer a:visited { color:#878787; }
+
+table th { padding:7px 5px; text-align:left; vertical-align:middle; border: 1px solid #d6d4d4; font-weight:bold; }
+table td { padding:7px 5px; text-align:left; vertical-align:top; border:1px solid #d6d4d4; }
+
+
+
+
+
+  </style></head><body><div class="content"><pre class="codeinput"><span class="comment">%function E=driver();</span>
+natom=1; <span class="comment">%Total number of atoms</span>
+AL=[0 0 0];  <span class="comment">%AtomList: Coordinate list of atomic positions</span>
+Z=[4];  <span class="comment">%List of nuclei with charge Z</span>
+N=4;
+
+<span class="comment">%Build the basis functions (Could be a separate function)</span>
+<span class="comment">%Starting with uncontracted  6-31G exponents</span>
+S=[1264.5857
+        189.9368100
+     43.1590890
+     12.0986630
+      3.8063232
+      1.2728903 ]   ;
+SP2=[      3.1964631
+      0.7478133
+      0.2199663
+     0.0823099];
+
+<span class="keyword">for</span> i = 1:size(S,1);
+    basis{i}.n=1;
+    basis{i}.g=primitive(AL(1),AL(2),AL(3),0,0,0,S(i));
+    basis{i}.c=1;
+<span class="keyword">end</span>
+<span class="keyword">for</span> i = 1:4
+
+        basis{i+size(S,1)}.n=1;
+        basis{i+size(S,1)}.g=primitive(AL(1),AL(2),AL(3),0,0,0,SP2(i));
+        basis{i+size(S,1)}.c=1;
+
+                basis{i +4+ size(S,1)}.n=1;
+        basis{i+4+size(S,1)}.g=primitive(AL(1),AL(2),AL(3),1,0,0,SP2(i));
+        basis{i+4+size(S,1)}.c=1;
+
+                basis{i+8+size(S,1)}.n=1;
+        basis{i+8+size(S,1)}.g=primitive(AL(1),AL(2),AL(3),0,1,0,SP2(i));
+        basis{i+8+size(S,1)}.c=1;
+
+                basis{i+12+size(S,1)}.n=1;
+        basis{i+12+size(S,1)}.g=primitive(AL(1),AL(2),AL(3),0,0,1,SP2(i));
+        basis{i+12+size(S,1)}.c=1;tic
+<span class="keyword">end</span>
+<span class="comment">% basis{1}.n=2;</span>
+<span class="comment">% basis{1}.g(1)=primitive(AL(1),AL(2),AL(3),0,0,0,S(1,1));</span>
+<span class="comment">% basis{1}.c(1)=S(1,2);</span>
+<span class="comment">% basis{1}.g(2)=primitive(AL(1),AL(2),AL(3),0,0,0,S(2,1));</span>
+<span class="comment">% basis{1}.c(2)=S(2,2);</span>
+<span class="comment">% basis{2}.n=1;</span>
+<span class="comment">% basis{2}.g(1)=primitive(AL(1),AL(2),AL(3),0,0,0,SP2(1));</span>
+<span class="comment">% basis{2}.c(1)=1;</span>
+<span class="comment">% basis{3}.n=1;</span>
+<span class="comment">% basis{3}.g(1)=primitive(AL(1), AL(2), AL(3), 0, 0, 0,SP22(1));</span>
+<span class="comment">% basis{3}.c(1)=1;</span>
+
+nb=size(basis,2);
+<span class="comment">%Compute Overlap Integrals</span>
+clear <span class="string">S</span>;
+<span class="keyword">for</span> n=1:nb
+    <span class="keyword">for</span> m=1:nb
+        S(n,m)=0;
+        <span class="keyword">for</span> nba=1:basis{n}.n
+            <span class="keyword">for</span> nbb=1:basis{m}.n
+                S(n,m)=S(n,m)+goverlap(basis{n}.g(nba),basis{m}.g(nbb))*basis{n}.c(nba)*basis{m}.c(nbb);
+            <span class="keyword">end</span>
+        <span class="keyword">end</span>
+    <span class="keyword">end</span>
+<span class="keyword">end</span>
+
+rho=zeros(nb,nb);
+<span class="keyword">for</span> i = 1:N/2  <span class="comment">%build initial density rho based on number of electrons filling the bottom N/2 orbitals</span>
+    rho(i,i)=2;
+<span class="keyword">end</span>
+<span class="comment">%Compute T</span>
+tic
+T=zeros(nb,nb);
+T=Kinetic(basis);
+toc
+vab=coulomb_attraction(basis,AL,Z);
+toc
+gabcd=electron_repulsion_new(basis);
+<span class="comment">%Took 87 seconds for a 22x22 basis set using the 8fold symmetry of gabcd</span>
+
+toc
+
+<span class="comment">%Orthogonalize the S matrix</span>
+[V D]=eig(S);
+<span class="comment">%SV = VD;</span>
+<span class="comment">%V'SV = D</span>
+<span class="comment">%S^-.5 = V*D^-.5 *V'</span>
+S2=V*D^(-.5)*V';
+H0=vab + T;
+F0=S2'*H0*S2;
+[epsilon, C]=eig(F0);
+</pre><pre class="codeoutput">
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+
+S =
+
+     0
+
+Elapsed time is 0.230493 seconds.
+Elapsed time is 0.293386 seconds.
+
+a =
+
+     1
+
+
+a =
+
+     2
+
+
+a =
+
+     3
+
+
+a =
+
+     4
+
+
+a =
+
+     5
+
+
+a =
+
+     6
+
+
+a =
+
+     7
+
+
+a =
+
+     8
+
+
+a =
+
+     9
+
+
+a =
+
+    10
+
+
+a =
+
+    11
+
+
+a =
+
+    12
+
+
+a =
+
+    13
+
+
+a =
+
+    14
+
+
+a =
+
+    15
+
+
+a =
+
+    16
+
+
+a =
+
+    17
+
+
+a =
+
+    18
+
+
+a =
+
+    19
+
+
+a =
+
+    20
+
+
+a =
+
+    21
+
+
+a =
+
+    22
+
+Elapsed time is 16.688244 seconds.
+</pre><p class="footer"><br><a href="http://www.mathworks.com/products/matlab/">Published with MATLAB&reg; R2015a</a><br></p></div><!--
+##### SOURCE BEGIN #####
+%function E=driver();
+natom=1; %Total number of atoms
+AL=[0 0 0];  %AtomList: Coordinate list of atomic positions
+Z=[4];  %List of nuclei with charge Z
+N=4;
+
+%Build the basis functions (Could be a separate function)
+%Starting with uncontracted  6-31G exponents
+S=[1264.5857
+        189.9368100               
+     43.1590890                     
+     12.0986630                     
+      3.8063232                      
+      1.2728903 ]   ;          
+SP2=[      3.1964631        
+      0.7478133                   
+      0.2199663 
+     0.0823099];
+  
+for i = 1:size(S,1);
+    basis{i}.n=1;
+    basis{i}.g=primitive(AL(1),AL(2),AL(3),0,0,0,S(i));
+    basis{i}.c=1;
+end
+for i = 1:4
+    
+        basis{i+size(S,1)}.n=1;
+        basis{i+size(S,1)}.g=primitive(AL(1),AL(2),AL(3),0,0,0,SP2(i));
+        basis{i+size(S,1)}.c=1;
+        
+                basis{i +4+ size(S,1)}.n=1;
+        basis{i+4+size(S,1)}.g=primitive(AL(1),AL(2),AL(3),1,0,0,SP2(i));
+        basis{i+4+size(S,1)}.c=1;
+        
+                basis{i+8+size(S,1)}.n=1;
+        basis{i+8+size(S,1)}.g=primitive(AL(1),AL(2),AL(3),0,1,0,SP2(i));
+        basis{i+8+size(S,1)}.c=1;
+        
+                basis{i+12+size(S,1)}.n=1;
+        basis{i+12+size(S,1)}.g=primitive(AL(1),AL(2),AL(3),0,0,1,SP2(i));
+        basis{i+12+size(S,1)}.c=1;tic
+end
+% basis{1}.n=2;
+% basis{1}.g(1)=primitive(AL(1),AL(2),AL(3),0,0,0,S(1,1));
+% basis{1}.c(1)=S(1,2);
+% basis{1}.g(2)=primitive(AL(1),AL(2),AL(3),0,0,0,S(2,1));
+% basis{1}.c(2)=S(2,2);
+% basis{2}.n=1;
+% basis{2}.g(1)=primitive(AL(1),AL(2),AL(3),0,0,0,SP2(1));
+% basis{2}.c(1)=1;
+% basis{3}.n=1;
+% basis{3}.g(1)=primitive(AL(1), AL(2), AL(3), 0, 0, 0,SP22(1)); 
+% basis{3}.c(1)=1;
+
+nb=size(basis,2);
+%Compute Overlap Integrals
+clear S;
+for n=1:nb
+    for m=1:nb
+        S(n,m)=0;
+        for nba=1:basis{n}.n
+            for nbb=1:basis{m}.n
+                S(n,m)=S(n,m)+goverlap(basis{n}.g(nba),basis{m}.g(nbb))*basis{n}.c(nba)*basis{m}.c(nbb);
+            end
+        end
+    end
+end
+
+rho=zeros(nb,nb);
+for i = 1:N/2  %build initial density rho based on number of electrons filling the bottom N/2 orbitals
+    rho(i,i)=2;
+end
+%Compute T
+tic
+T=zeros(nb,nb);
+T=Kinetic(basis);
+toc
+vab=coulomb_attraction(basis,AL,Z);
+toc
+gabcd=electron_repulsion_new(basis);
+%Took 87 seconds for a 22x22 basis set using the 8fold symmetry of gabcd
+
+toc
+
+%Orthogonalize the S matrix
+[V D]=eig(S);
+%SV = VD;
+%V'SV = D
+%S^-.5 = V*D^-.5 *V'
+S2=V*D^(-.5)*V';
+H0=vab + T;
+F0=S2'*H0*S2;
+[epsilon, C]=eig(F0);
+
+##### SOURCE END #####
+--></body></html>
